@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提交投标方案 - EcoGov</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://tcb-sdk.tencentcloudapi.com/1.7.0/cloudbase.full.js"></script>
+    <style>
+        :root {
+            --primary: #2a8c2a;
+            --bg: #f0f2f5;
+            --border: #e1e4e8;
+            --text-main: #24292e;
+            --text-secondary: #586069;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text-main); line-height: 1.6; }
+
+        .top-nav { background: #fff; padding: 15px 40px; border-bottom: 1px solid var(--border); font-size: 14px; }
+        .top-nav a { color: var(--primary); text-decoration: none; cursor: pointer; }
+
+        .tender-wrapper { 
+            display: grid; 
+            grid-template-columns: 380px 1fr; 
+            gap: 25px; 
+            max-width: 1300px; 
+            margin: 30px auto; 
+            padding: 0 20px;
+        }
+
+        .requirement-side { background: #fff; border-radius: 12px; padding: 25px; height: fit-content; position: sticky; top: 20px; border: 1px solid var(--border); }
+        .side-tag { background: #eef7ee; color: var(--primary); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; }
+        .side-title { font-size: 18px; margin: 15px 0; }
+        .side-info-item { margin-bottom: 15px; font-size: 14px; }
+        .side-info-item label { color: var(--text-secondary); display: block; margin-bottom: 4px; }
+        .budget-box { background: #f8fafc; padding: 15px; border-radius: 8px; border-left: 4px solid var(--primary); margin-top: 20px; }
+
+        .form-side { background: #fff; border-radius: 12px; padding: 40px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .form-header { border-bottom: 1px solid #eee; margin-bottom: 30px; padding-bottom: 20px; }
+        
+        .form-group { margin-bottom: 25px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 10px; font-size: 15px; }
+        .form-group input, .form-group textarea, .form-group select { 
+            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; outline: none; font-size: 14px; 
+        }
+        .form-group input:focus, .form-group textarea:focus { border-color: var(--primary); }
+
+        .price-wrapper { position: relative; width: 100%; max-width: 280px; }
+        .price-wrapper input { padding-left: 30px; font-weight: bold; color: #d32f2f; }
+        .price-wrapper::before { content: "¥"; position: absolute; left: 12px; top: 12px; color: #d32f2f; }
+
+        /* AI 生成按钮 */
+        .ai-btn { background: #f0fdf4; border: 1px solid var(--primary); color: var(--primary); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; margin-left: 12px; transition: 0.2s; }
+        .ai-btn:hover { background: var(--primary); color: white; }
+
+        .file-count-tag { font-size: 12px; font-weight: normal; color: var(--text-secondary); background: #f1f5f9; padding: 2px 8px; border-radius: 4px; margin-left: 10px; }
+        .multi-upload-container { border: 1px solid var(--border); border-radius: 12px; background: #fff; overflow: hidden; }
+        
+        .file-list-area { padding: 10px; background: #fcfcfc; max-height: 250px; overflow-y: auto; }
+        .file-status-card { display: flex; align-items: center; background: #fff; padding: 10px 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 8px; }
+        .file-icon { font-size: 24px; color: #ef4444; margin-right: 15px; }
+        .file-info { flex: 1; overflow: hidden; }
+        .file-info .name { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-info .size { font-size: 11px; color: var(--text-secondary); }
+        .file-actions { display: flex; align-items: center; gap: 12px; }
+        .btn-delete { color: #94a3b8; cursor: pointer; font-size: 18px; transition: 0.2s; }
+        .btn-delete:hover { color: #ef4444; }
+
+        .upload-drop-zone { padding: 30px; text-align: center; cursor: pointer; background: #f8fafc; transition: 0.3s; border-top: 1px solid #eee; }
+        .upload-drop-zone:hover { background: #f0fdf4; }
+        .upload-prompt { display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .upload-icon { font-size: 28px; color: var(--primary); }
+
+        .btn-row { display: flex; gap: 15px; margin-top: 40px; }
+        .btn-submit { background: var(--primary); color: #fff; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 2; font-size: 16px; }
+        .btn-save { background: #fff; color: #666; border: 1px solid #ddd; padding: 14px; border-radius: 8px; cursor: pointer; flex: 1; }
+        
+        .hidden { display: none !important; }
+        .loading { opacity: 0.6; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+<nav class="top-nav">
+    <a href="javascript:history.back()"><i class="fas fa-arrow-left"></i> 返回商机大厅</a>
+    <i class="fas fa-chevron-right" style="font-size: 10px; margin: 0 5px;"></i>
+    <span>提交投标</span>
+</nav>
+
+<div class="tender-wrapper">
+    <!-- 左侧：招标需求（动态加载） -->
+    <aside class="requirement-side" id="requirementSide">
+        <div style="text-align: center; padding: 40px;">加载中...</div>
+    </aside>
+
+    <!-- 右侧：投标表单 -->
+    <main class="form-side">
+        <div class="form-header">
+            <h2>填写投标申请</h2>
+            <p style="font-size: 14px; color: #999;">请确保上传所有必要的资质证明与技术方案附件。</p>
+        </div>
+
+        <form id="tender-form">
+            <div class="form-group">
+                <label>投标总报价 (含税) <span id="budgetWarning" style="color: #d32f2f; font-size: 12px;"></span></label>
+                <div class="price-wrapper">
+                    <input type="number" id="bidAmount" placeholder="0.00" step="0.01" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    方案摘要
+                    <button type="button" class="ai-btn" id="aiGenerateBtn" onclick="generateByAI()">
+                        <i class="fas fa-robot"></i> AI 智能生成
+                    </button>
+                </label>
+                <textarea id="proposalSummary" rows="4" placeholder="请简要说明您的方案核心优势..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>技术方案及招标书附件 <span id="file-count" class="file-count-tag">已上传 0 份</span></label>
+                <div class="multi-upload-container">
+                    <div id="file-list-container" class="file-list-area"></div>
+                    <div class="upload-drop-zone" id="drop-zone" onclick="document.getElementById('bid-files').click()">
+                        <div class="upload-prompt">
+                            <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                            <div class="upload-text">
+                                <p class="main-text">点击或拖拽文件上传</p>
+                                <p class="sub-text">支持 PDF, Word, JPG 等格式，多文件支持</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <input type="file" id="bid-files" class="hidden" multiple accept=".pdf,.doc,.docx,.jpg,.png" onchange="processFiles(this.files)">
+            </div>
+
+            <div class="btn-row">
+                <button type="button" class="btn-save" onclick="saveDraft()">保存草稿</button>
+                <button type="button" class="btn-submit" onclick="submitFinal()">提交投标申请</button>
+            </div>
+        </form>
+    </main>
+</div>
+
+<script>
+// 初始化云开发
+const app = cloudbase.init({ env: "eco-project" });
+let currentUserId = null;
+let currentTender = null;
+let uploadedFiles = [];      // 存储文件对象
+let uploadedFileUrls = [];   // 存储上传后的文件URL
+
+// 获取 URL 参数
+function getUrlParam(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+}
+
+const tenderId = getUrlParam('tenderId');
+
+// 匿名登录
+app.auth().anonymousAuthProvider().signIn().then(async () => {
+    const loginState = await app.auth().getLoginState();
+    currentUserId = loginState.user.uid;
+    console.log("登录成功, userId:", currentUserId);
+    
+    // 加载招标详情
+    if (tenderId) {
+        await loadTenderDetail();
+    } else {
+        document.getElementById('requirementSide').innerHTML = '<div style="text-align:center; padding:40px; color:#888;">缺少招标ID</div>';
+    }
+}).catch(err => {
+    console.error("登录失败", err);
+    document.getElementById('requirementSide').innerHTML = '<div style="text-align:center; padding:40px; color:#888;">登录失败，请刷新重试</div>';
+});
+
+// 加载招标详情
+async function loadTenderDetail() {
+    try {
+        const result = await app.callFunction({
+            name: 'getTenderDetail',
+            data: { tenderId: tenderId }
+        });
+        
+        if (result.result.code === 0) {
+            currentTender = result.result.data;
+            renderTenderSide();
+        } else {
+            document.getElementById('requirementSide').innerHTML = '<div style="text-align:center; padding:40px; color:#888;">招标不存在</div>';
+        }
+    } catch (err) {
+        console.error("加载失败", err);
+        document.getElementById('requirementSide').innerHTML = '<div style="text-align:center; padding:40px; color:#888;">加载失败，请刷新重试</div>';
+    }
+}
+
+// 渲染左侧招标信息
+function renderTenderSide() {
+    if (!currentTender) return;
+    
+    const budgetMin = currentTender.budget * 0.8;
+    const budgetMax = currentTender.budget;
+    
+    document.getElementById('requirementSide').innerHTML = `
+        <span class="side-tag">项目编号：${currentTender._id || '—'}</span>
+        <h2 class="side-title">${currentTender.title || '无标题'}</h2>
+        <div class="side-info-item"><label>发布单位</label><p>${currentTender.publisher || '政府环保部门'}</p></div>
+        <div class="side-info-item"><label>监管类别</label><p>${currentTender.category || '—'}</p></div>
+        <div class="side-info-item"><label>截止时间</label><p>${currentTender.deadline || '—'}</p></div>
+        <div class="side-info-item"><label>负责人</label><p>${currentTender.leader || '—'}</p></div>
+        <div class="budget-box">
+            <label style="font-size: 12px; color: #666;">预算范围</label>
+            <p style="font-size: 20px; color: var(--primary); font-weight: bold;">¥${currentTender.budget} 万元</p>
+        </div>
+        <div class="side-info-item"><label>环保考核指标</label><p>${currentTender.indicators ? currentTender.indicators.join('、') : '—'}</p></div>
+    `;
+    
+    // 设置报价输入框的提示
+    const priceInput = document.getElementById('bidAmount');
+    const warningSpan = document.getElementById('budgetWarning');
+    if (priceInput) {
+        priceInput.placeholder = `建议范围：${budgetMin} - ${budgetMax} 万元`;
+        priceInput.addEventListener('change', () => {
+            const val = parseFloat(priceInput.value);
+            if (val > budgetMax) {
+                warningSpan.innerText = '⚠️ 报价超过预算范围';
+            } else if (val < budgetMin) {
+                warningSpan.innerText = '⚠️ 报价过低，可能影响中标';
+            } else {
+                warningSpan.innerText = '';
+            }
+        });
+    }
+}
+
+// ========== AI 生成方案 ==========
+async function generateByAI() {
+    if (!currentTender) {
+        alert('请等待招标信息加载完成');
+        return;
+    }
+    
+    const summaryTextarea = document.getElementById('proposalSummary');
+    const btn = document.getElementById('aiGenerateBtn');
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> 生成中...';
+    btn.disabled = true;
+    
+    try {
+        // 调用云函数，由云函数调用通义千问 API
+        const result = await app.callFunction({
+            name: 'generateProposal',
+            data: {
+                tenderTitle: currentTender.title,
+                tenderCategory: currentTender.category,
+                tenderIndicators: currentTender.indicators || [],
+                tenderBudget: currentTender.budget
+            }
+        });
+        
+        if (result.result.code === 0) {
+            summaryTextarea.value = result.result.data;
+        } else {
+            alert('AI生成失败：' + result.result.message);
+        }
+    } catch (err) {
+        console.error('AI生成失败', err);
+        alert('AI生成失败，请稍后重试');
+    } finally {
+        btn.innerHTML = '<i class="fas fa-robot"></i> AI 智能生成';
+        btn.disabled = false;
+    }
+}
+
+// ========== 文件上传到云存储 ==========
+async function uploadFilesToCloud() {
+    const uploadPromises = uploadedFiles.map(async (file) => {
+        const filePath = `bids/${currentUserId}/${Date.now()}_${file.name}`;
+        try {
+            const result = await app.uploadFile({
+                cloudPath: filePath,
+                filePath: file
+            });
+            return result.fileID;
+        } catch (err) {
+            console.error('上传失败', file.name, err);
+            return null;
+        }
+    });
+    
+    const fileIds = await Promise.all(uploadPromises);
+    return fileIds.filter(id => id !== null);
+}
+
+// 文件列表渲染
+function processFiles(files) {
+    if (!files || files.length === 0) return;
+    const newFiles = Array.from(files);
+    newFiles.forEach(file => {
+        const isExist = uploadedFiles.some(f => f.name === file.name && f.size === file.size);
+        if (!isExist) {
+            uploadedFiles.push(file);
+        }
+    });
+    renderFileList();
+    document.getElementById('bid-files').value = '';
+}
+
+function renderFileList() {
+    const container = document.getElementById('file-list-container');
+    const countTag = document.getElementById('file-count');
+    container.innerHTML = ''; 
+
+    uploadedFiles.forEach((file, index) => {
+        let iconClass = 'fa-file-pdf';
+        if (file.name.match(/\.(doc|docx)$/i)) iconClass = 'fa-file-word';
+        if (file.name.match(/\.(xls|xlsx)$/i)) iconClass = 'fa-file-excel';
+        if (file.name.match(/\.(jpg|png|jpeg)$/i)) iconClass = 'fa-file-image';
+
+        const sizeStr = (file.size / 1024 / 1024).toFixed(2) + " MB";
+
+        const card = document.createElement('div');
+        card.className = 'file-status-card';
+        card.innerHTML = `
+            <i class="fas ${iconClass} file-icon"></i>
+            <div class="file-info">
+                <span class="name" title="${file.name}">${file.name}</span>
+                <span class="size">${sizeStr}</span>
+            </div>
+            <div class="file-actions">
+                <i class="fas fa-check-circle" style="color:#22c55e; font-size:16px;"></i>
+                <i class="fas fa-times-circle btn-delete" onclick="removeFile(${index}, event)"></i>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+
+    countTag.innerText = `已上传 ${uploadedFiles.length} 份`;
+}
+
+function removeFile(index, event) {
+    event.stopPropagation();
+    uploadedFiles.splice(index, 1);
+    renderFileList();
+}
+
+// 拖拽上传
+const zone = document.getElementById('drop-zone');
+zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.style.background = "#f0fdf4"; });
+zone.addEventListener('dragleave', () => { zone.style.background = "#f8fafc"; });
+zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.style.background = "#f8fafc";
+    if (e.dataTransfer.files) processFiles(e.dataTransfer.files);
+});
+
+// 保存草稿
+async function saveDraft() {
+    const bidAmount = document.getElementById('bidAmount').value;
+    const proposalSummary = document.getElementById('proposalSummary').value;
+    
+    if (!bidAmount) {
+        alert('请填写投标报价');
+        return;
+    }
+    
+    // 先上传文件
+    const fileIds = await uploadFilesToCloud();
+    
+    const draftData = {
+        tenderId: tenderId,
+        enterpriseId: currentUserId,
+        bidAmount: parseFloat(bidAmount),
+        proposalSummary: proposalSummary,
+        attachments: fileIds,
+        status: 'draft',
+        updatedAt: new Date().toISOString()
+    };
+    
+    try {
+        const result = await app.callFunction({
+            name: 'saveBidDraft',
+            data: draftData
+        });
+        
+        if (result.result.code === 0) {
+            alert('草稿已保存');
+        } else {
+            alert('保存失败：' + result.result.message);
+        }
+    } catch (err) {
+        console.error('保存失败', err);
+        alert('保存失败，请重试');
+    }
+}
+
+// 提交投标
+async function submitFinal() {
+    const bidAmount = document.getElementById('bidAmount').value;
+    const proposalSummary = document.getElementById('proposalSummary').value;
+    
+    if (!bidAmount) {
+        alert('请填写投标报价');
+        return;
+    }
+    if (uploadedFiles.length === 0) {
+        alert('请至少上传一份技术方案附件');
+        return;
+    }
+    
+    const btn = document.querySelector('.btn-submit');
+    btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> 提交中...';
+    btn.disabled = true;
+    
+    // 上传文件到云存储
+    const fileIds = await uploadFilesToCloud();
+    
+    const bidData = {
+        tenderId: tenderId,
+        enterpriseId: currentUserId,
+        enterpriseName: '示例企业',  // 应从企业信息获取
+        bidAmount: parseFloat(bidAmount),
+        proposalSummary: proposalSummary,
+        attachments: fileIds,
+        status: 'submitted',
+        submittedAt: new Date().toISOString()
+    };
+    
+    try {
+        const result = await app.callFunction({
+            name: 'submitBid',
+            data: bidData
+        });
+        
+        if (result.result.code === 0) {
+            alert('投标申请提交成功！');
+            window.location.href = 'qyd-bid-list.html';
+        } else {
+            alert('提交失败：' + result.result.message);
+        }
+    } catch (err) {
+        console.error('提交失败', err);
+        alert('提交失败，请重试');
+    } finally {
+        btn.innerHTML = '提交投标申请';
+        btn.disabled = false;
+    }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,286 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>反馈建议 - EcoPub</title>
+<script>
+// 云函数 HTTP 触发地址（固定不变）
+const API_BASE = 'https://eco-project-d2grfzzu4ca135e6d-1423499375.ap-shanghai.app.tcloudbase.com';
+
+// 调用云函数
+async function callFunction(name, data) {
+    const response = await fetch(`${API_BASE}/${name}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data || {})
+    });
+    return response.json();
+}
+</script>
+    <style>
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: #f0f4f0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .feedback-card {
+            background: white;
+            width: 500px;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            position: relative;
+        }
+
+        .back-home {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            text-decoration: none;
+            color: #2a8c2a;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        h2 { color: #333; margin-top: 10px; text-align: center; }
+        p.subtitle { color: #888; text-align: center; font-size: 14px; margin-bottom: 30px; }
+
+        /* 分类标签 */
+        .type-group {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+        }
+
+        .type-item {
+            flex: 1;
+            margin: 0 5px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #666;
+        }
+
+        .type-item:hover { background: #f0f9f0; border-color: #2a8c2a; }
+        .type-item.active { 
+            background: #2a8c2a; 
+            color: white; 
+            border-color: #2a8c2a;
+            box-shadow: 0 4px 10px rgba(42, 140, 42, 0.3);
+        }
+
+        /* 输入框样式 */
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-size: 14px; color: #555; }
+        
+        textarea, input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            outline: none;
+            box-sizing: border-box;
+            background: #fdfdfd;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus { border-color: #2a8c2a; background: #fff; }
+
+        /* 提交按钮 */
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: #2a8c2a;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover {
+            background: #217321;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(42, 140, 42, 0.2);
+        }
+
+        /* 奖励提示 */
+        .reward-tip {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #2a8c2a;
+            text-align: center;
+            background: #f0f9f0;
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        .upload-container {
+    display: flex;
+    flex-wrap: wrap; /* 自动换行 */
+    gap: 12px;
+    padding: 10px 0;
+}
+
+/* 通用的方块样式 */
+.upload-box {
+    width: 80px;
+    height: 80px;
+    background: #f4f4f4;
+    border: 1px dashed #ccc;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.upload-box:hover {
+    border-color: #2a8c2a;
+    background: #f0f9f0;
+}
+
+/* + 号样式 */
+.plus-icon {
+    font-size: 30px;
+    color: #999;
+    font-weight: 200;
+}
+
+/* 已上传图片的样式 */
+.uploaded-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 保证图片不缩放变形 */
+}
+
+/* 删除小红点 (可选) */
+.delete-btn {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #ff4400;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+    </style>
+</head>
+<body>
+
+    <div class="feedback-card">
+        <a href="javascript:history.back()" class="back-home">← 返回</a>
+        <h2>您的意见很重要</h2>
+        <p class="subtitle">每一份反馈都将获得 5-20 环保积分奖励</p>
+
+        <div class="type-group" id="typeGroup">
+            <div class="type-item active" onclick="selectType(this)">功能建议</div>
+            <div class="type-item" onclick="selectType(this)">内容报错</div>
+            <div class="type-item" onclick="selectType(this)">视觉吐槽</div>
+            <div class="type-item" onclick="selectType(this)">其他</div>
+        </div>
+
+        <div class="form-group">
+            <label>您想告诉我们什么？</label>
+            <textarea id="feedbackText" rows="5" placeholder="请详细描述您的问题或建议，我们会认真查看每一条反馈..."></textarea>
+        </div>
+<div class="upload-container" id="uploadContainer">
+    <div class="upload-box add-btn" onclick="triggerUpload()">
+        <span class="plus-icon">+</span>
+        <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageAdd(this)">
+    </div>
+</div>
+        <div class="form-group">
+            <label>联系方式 (可选)</label>
+            <input type="text" id="contact" placeholder="邮箱或手机号，方便我们向您反馈处理进度">
+        </div>
+
+        <button class="submit-btn" onclick="submitFeedback()">提交反馈</button>
+
+        <div class="reward-tip">
+            ✨ 您的反馈已被纳入“EcoPub 社区共建计划”
+        </div>
+    </div>
+
+    <script>
+        function selectType(el) {
+            let items = document.querySelectorAll('.type-item');
+            items.forEach(item => item.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function submitFeedback() {
+            let text = document.getElementById('feedbackText').value;
+            if(!text) {
+                alert('请填写反馈内容哦！');
+                return;
+            }
+
+            // 模拟提交成功
+            alert('提交成功！感谢您的反馈，5积分已存入您的账户。');
+            window.location.href = 'gzd.html'; // 提交后返回商城
+        }
+
+        function triggerUpload() {
+    document.getElementById('imageInput').click();
+}
+
+function handleImageAdd(input) {
+    var file = input.files[0];
+    if (!file) return;
+
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var container = document.getElementById('uploadContainer');
+        var addBtn = document.querySelector('.add-btn');
+
+        // 1. 创建一个新的方块
+        var newBox = document.createElement('div');
+        newBox.className = 'upload-box';
+
+        // 2. 插入图片内容
+        newBox.innerHTML = `
+            <img src="${e.target.result}" class="uploaded-img">
+            <div class="delete-btn" onclick="this.parentElement.remove()">×</div>
+        `;
+
+        // 3. 将新方块插入到 + 号按钮的前面
+        container.insertBefore(newBox, addBtn);
+
+        // 4. 清空 input 状态，否则连续选同一张图不会触发 onchange
+        input.value = "";
+    };
+
+    reader.readAsDataURL(file);
+}
+    </script>
+</body>
+</html>
